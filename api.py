@@ -46,7 +46,7 @@ class Subject(object):
         if not self._name:
             self._name = resp['name']
         self._courses = [Course(**info) for info in resp['courses']]
-        self._lectures = [Lecture(**info) for info in resp['lectures']]
+#         self._lectures = [Lecture(**info) for info in resp['lectures']]
         self._description = resp['description']
         self._loaded = True
 

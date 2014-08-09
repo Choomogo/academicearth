@@ -70,16 +70,14 @@ def get_subject_metadata(subject_url):
     '''Returns metadata for a subject parsed from the given url'''
     html = _html(make_showall_url(subject_url))
     name = get_subject_name(html)
-    courses = get_courses(html, subject_url=subject_url)
-    lectures = get_lectures(_html(subject_url))
-#     lectures = []
-#     lectures += [course['lectures'] for course in courses]
+    courses = get_courses(subject_url)
+#     lectures = get_lectures(_html(subject_url))
     desc = get_subject_description(html)
 
     return {
         'name': name,
         'courses': courses,
-        'lectures': lectures,
+#         'lectures': lectures,
         'description': desc,
     }
 
@@ -97,81 +95,83 @@ def get_lecture_name(html):
 
 
 def get_subject_description(html):
-#     desc_nodes = html.find('article').findAll('span')
     desc_nodes = html.find('div', {'itemprop': 'description'})
-#     return '\n'.join(node.text.strip() for node in desc_nodes)
     joined = '\n'.join(str(node.string) for node in desc_nodes)
     return joined
 
-'''deprecated'''
-def _get_courses_or_lectures(class_type, html):
-    '''class_type can be 'course' or 'lecture'.'''
-    nodes = html.findAll('div', {'class': class_type})
-
-    items = [{
-        'name': node.h3.text,
-        'url': _url(node.a['href']),
-        'icon': node.img['src'],
-        #'university':  '',
-        #'speaker': '',
-    } for node in nodes]
-
-    return items
-
-# '''Working! Don't touch this!'''
+# Working! Don't touch this!
 def get_lectures(html, course_name=None):
-#     '''Stores concatenated list of all found lectures.'''
+#     Stores concatenated list of all found lectures.
     lectures = []
 
-#     '''The number and order of 'lectures-list' will be equivalent to amount of courses'''
+#     The number and order of 'lectures-list' will be equivalent to amount of courses
     lecture_lists = html.findAll('div', {'class': 'lectures-list'})
 
-#     '''Iterates through each lecture-list pulling relevant data for each lecture
-#         into a data structure.'''
+#     Iterates through each lecture-list pulling relevant data for each lecture
+#     into a data structure.
     for lecture_list in lecture_lists:
         lecture_list = lecture_list.findAll('li')
         items = [{
                   'name': lecture.article.h4.text,
                   'url': lecture.a['href'],
                   'icon': lecture.a.img['src'],
-#                   'instructor': lecture.find('span', {'class': 'video-instructor'}).text,
-#                   'length': lecture.find('span', {'class': 'video-length'}).text
+                'instructor': lecture.find('span', {'class': 'video-instructor'}).text,
+                'length': lecture.find('span', {'class': 'video-length'}).text
                   } for lecture in lecture_list]
 
-#         '''Adds lectures found in current lecture-list to the previously collected lectures'''
         lectures += items
 
-#     '''If course_name is defined, all lectures found will be filtered to only
-#         include lectures that correspond to defined course_name.'''
+#     If course_name is defined, all lectures found will be filtered to only
+#     include lectures that correspond to defined course_name.
     if course_name != None:
         lectures = filter(lambda x: not course_name in x['name'], lectures)
 
     return lectures
 
+def get_courses(subject_url):
+    page1 = _html(subject_url)
+    pages = [page1]
 
-def get_courses(html, subject_url=None):
-    nodes = html.findAll('article', {'class': 'course-details'})
+    page_numbers = page1.findAll('a', {'class': 'page-numbers'})
+    if page_numbers != None:
+        pages += [_html(subject_url + a['href']) for a in page_numbers]
 
-    items = [{
-          'name': node.h3.text,
-          'url': subject_url,
-          'lectures': get_lectures(html, course_name=node.h3.text)
-          } for node in nodes]
+    course_previews = []
+    for page in pages:
+        course_previews += page.findAll('li', {'class': 'course-preview'})
 
-    return items
+    courses = [{
+#                 'name': course_preview.find('a', {'class': 'js-expand-course'}).string,
+                'name': course_preview.article.h3.a.text,
+                'url': subject_url,
+                'lectures': get_lectures_from_preview(course_preview)
+                } for course_preview in course_previews if course_preview.article != None]
+    return courses
 
+
+def get_lectures_from_preview(course_preview):
+    lecture_lists = course_preview.findAll('li', {'class': 'lecture-preview'})
+
+    lectures = [{
+                'name': lecture_list.article.h4.text,
+                'url': lecture_list.a['href'],
+                'icon': lecture_list.a.img['src'],
+                'instructor': lecture_list.find('span', {'class': 'video-instructor'}).text,
+                'length': lecture_list.find('span', {'class': 'video-length'}).text
+                  } for lecture_list in lecture_lists]
+    return lectures
 
 def get_course_metadata(course_url, course_name):
     html = _html(course_url)
     lectures = get_lectures(html, course_name)
-#     name = get_course_name(html)
+
     return {
         'lectures': lectures,
         'name': course_name
     }
 
 
-def get_lecture_metadata(lecture_url, course_name):
+def get_lecture_metadata(lecture_url):
     html = _html(lecture_url)
     name = get_lecture_name(html)
     youtube_id = parse_youtube_id(html)
