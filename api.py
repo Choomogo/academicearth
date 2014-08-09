@@ -31,7 +31,7 @@ class Subject(object):
         self.url = url
         self._name = name
         self._courses = None
-        self._lectures = None
+#         self._lectures = None
         self._loaded = False
 
     @classmethod
@@ -113,6 +113,7 @@ class Lecture(object):
         self.url = url
         self._name = name
         self._loaded = False
+        self._load_metadata()
 
     @classmethod
     def from_url(cls, url):
@@ -122,7 +123,7 @@ class Lecture(object):
         return u"<Lecture '%s'>" % self.name
 
     def _load_metadata(self):
-        resp = get_lecture_metadata(self.url, self._name)
+        resp = get_lecture_metadata(self.url)
         if not self._name:
             self._name = resp['name']
         self._youtube_id = resp['youtube_id']

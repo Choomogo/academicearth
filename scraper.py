@@ -30,16 +30,6 @@ def _html(url):
     return BS(get(url), convertEntities=BS.HTML_ENTITIES)
 
 
-def make_showall_url(url):
-    '''Takes an api url and appends info to the path to force the page to
-    return all entries instead of paginating.
-    '''
-    if not url.endswith('/'):
-        url += '/'
-    '''return url + 'page:1/show:500' '''
-    return url
-
-
 def get_subjects():
     '''Returns a list of subjects for the website. Each subject is a dict with
     keys of 'name' and 'url'.
@@ -68,16 +58,15 @@ def get_subjects():
 
 def get_subject_metadata(subject_url):
     '''Returns metadata for a subject parsed from the given url'''
-    html = _html(make_showall_url(subject_url))
+    html = _html(subject_url)
     name = get_subject_name(html)
     courses = get_courses(subject_url)
-#     lectures = get_lectures(_html(subject_url))
     desc = get_subject_description(html)
 
     return {
         'name': name,
         'courses': courses,
-#         'lectures': lectures,
+        'lectures': [],
         'description': desc,
     }
 
@@ -91,12 +80,12 @@ def get_course_name(html):
 
 
 def get_lecture_name(html):
-    return html.find('section', {'class': 'pagenav'}).span.text
+    return html.find('span', {'id': 'eow-title'}).text
 
 
 def get_subject_description(html):
     desc_nodes = html.find('div', {'itemprop': 'description'})
-    joined = '\n'.join(str(node.string) for node in desc_nodes)
+    joined = '\n'.join(str(node.string) for node in desc_nodes if node.string != None)
     return joined
 
 # Working! Don't touch this!
@@ -112,9 +101,9 @@ def get_lectures(html, course_name=None):
     for lecture_list in lecture_lists:
         lecture_list = lecture_list.findAll('li')
         items = [{
-                  'name': lecture.article.h4.text,
-                  'url': lecture.a['href'],
-                  'icon': lecture.a.img['src'],
+                'name': lecture.article.h4.text,
+                'url': lecture.a['href'],
+                'icon': lecture.a.img['src'],
                 'instructor': lecture.find('span', {'class': 'video-instructor'}).text,
                 'length': lecture.find('span', {'class': 'video-length'}).text
                   } for lecture in lecture_list]
@@ -141,7 +130,6 @@ def get_courses(subject_url):
         course_previews += page.findAll('li', {'class': 'course-preview'})
 
     courses = [{
-#                 'name': course_preview.find('a', {'class': 'js-expand-course'}).string,
                 'name': course_preview.article.h3.a.text,
                 'url': subject_url,
                 'lectures': get_lectures_from_preview(course_preview)
@@ -174,18 +162,13 @@ def get_course_metadata(course_url, course_name):
 def get_lecture_metadata(lecture_url):
     html = _html(lecture_url)
     name = get_lecture_name(html)
-    youtube_id = parse_youtube_id(html)
+#     youtube_id = parse_youtube_id(html)
+    youtube_id = parse_youtube_id(lecture_url)
     return {
         'name': name,
         'youtube_id': youtube_id
     }
 
+def parse_youtube_id(lecture_url):
+    return lecture_url.split('v=')[1]
 
-
-def parse_youtube_id(html):
-    embed = html.find('embed')
-    yt_ptn = re.compile(r'http://www.youtube.com/v/(.+?)\?')
-    match = yt_ptn.search(embed['src'])
-    if match:
-        return match.group(1)
-    return None
