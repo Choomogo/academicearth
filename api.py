@@ -56,7 +56,7 @@ class Subject(object):
         if not self._name:
             self._load_metadata()
         return self._name
-        
+
     @property
     def courses(self):
         '''List of courses available for this subject'''
@@ -88,7 +88,7 @@ class Course(object):
         return u"<Course '%s'>" % self.name
 
     def _load_metadata(self):
-        resp = get_course_metadata(self.url)
+        resp = get_course_metadata(self.url, self._name)
         if not self._name:
             self._name = resp['name']
         self._lectures = [Lecture(**info) for info in resp['lectures']]
@@ -122,7 +122,7 @@ class Lecture(object):
         return u"<Lecture '%s'>" % self.name
 
     def _load_metadata(self):
-        resp = get_lecture_metadata(self.url)
+        resp = get_lecture_metadata(self.url, self._name)
         if not self._name:
             self._name = resp['name']
         self._youtube_id = resp['youtube_id']

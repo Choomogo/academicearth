@@ -49,9 +49,6 @@ def get_subjects():
     html = _html(url)
     article = html.article
     subjs = article.findAll('a')
-    '''subjs = html.findAll('a',
-        {'href': lambda attr_value: attr_value.startswith('/subjects/')
-                                    and len(attr_value) > len('/subjects/')})'''
 
     # subjs will contain some duplicates so we will key on url
     items = []
@@ -74,9 +71,9 @@ def get_subject_metadata(subject_url):
     html = _html(make_showall_url(subject_url))
     name = get_subject_name(html)
     courses = get_courses(html, subject_url=subject_url)
-#     lectures = get_lectures(html)
-    lectures = []
-    lectures += [course['lectures'] for course in courses]
+    lectures = get_lectures(_html(subject_url))
+#     lectures = []
+#     lectures += [course['lectures'] for course in courses]
     desc = get_subject_description(html)
 
     return {
@@ -103,7 +100,7 @@ def get_subject_description(html):
 #     desc_nodes = html.find('article').findAll('span')
     desc_nodes = html.find('div', {'itemprop': 'description'})
 #     return '\n'.join(node.text.strip() for node in desc_nodes)
-    joined = '\n'.join(str(node) for node in desc_nodes)
+    joined = '\n'.join(str(node.string) for node in desc_nodes)
     return joined
 
 '''deprecated'''
@@ -121,31 +118,31 @@ def _get_courses_or_lectures(class_type, html):
 
     return items
 
-'''Working! Don't touch this!'''
+# '''Working! Don't touch this!'''
 def get_lectures(html, course_name=None):
-    '''Stores concatenated list of all found lectures.'''
+#     '''Stores concatenated list of all found lectures.'''
     lectures = []
 
-    '''The number and order of 'lectures-list' will be equivalent to amount of courses'''
+#     '''The number and order of 'lectures-list' will be equivalent to amount of courses'''
     lecture_lists = html.findAll('div', {'class': 'lectures-list'})
 
-    '''Iterates through each lecture-list pulling relevant data for each lecture
-        into a data structure.'''
+#     '''Iterates through each lecture-list pulling relevant data for each lecture
+#         into a data structure.'''
     for lecture_list in lecture_lists:
         lecture_list = lecture_list.findAll('li')
         items = [{
                   'name': lecture.article.h4.text,
                   'url': lecture.a['href'],
                   'icon': lecture.a.img['src'],
-                  'instructor': lecture.find('span', {'class': 'video-instructor'}).text,
-                  'length': lecture.find('span', {'class': 'video-length'}).text
+#                   'instructor': lecture.find('span', {'class': 'video-instructor'}).text,
+#                   'length': lecture.find('span', {'class': 'video-length'}).text
                   } for lecture in lecture_list]
 
-        '''Adds lectures found in current lecture-list to the previously collected lectures'''
+#         '''Adds lectures found in current lecture-list to the previously collected lectures'''
         lectures += items
 
-    '''If course_name is defined, all lectures found will be filtered to only
-        include lectures that correspond to defined course_name.'''
+#     '''If course_name is defined, all lectures found will be filtered to only
+#         include lectures that correspond to defined course_name.'''
     if course_name != None:
         lectures = filter(lambda x: not course_name in x['name'], lectures)
 
@@ -167,10 +164,10 @@ def get_courses(html, subject_url=None):
 def get_course_metadata(course_url, course_name):
     html = _html(course_url)
     lectures = get_lectures(html, course_name)
-    name = get_course_name(html)
+#     name = get_course_name(html)
     return {
         'lectures': lectures,
-        'name': name
+        'name': course_name
     }
 
 
